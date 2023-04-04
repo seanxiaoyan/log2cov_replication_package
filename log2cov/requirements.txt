@@ -1,0 +1,5 @@
+beniget==0.4.1
+gast==0.5.3
+parse==1.19.0
+Pebble==5.0.2
+pymongo==4.2.0
