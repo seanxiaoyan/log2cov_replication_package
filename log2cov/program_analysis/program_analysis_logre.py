@@ -52,13 +52,6 @@ def traverse_AST(entry, log_seq, project_name, port_number):
             else:
                 return entry
 
-            # if db_upated:
-            #     # logging.info(entry)
-            #     return entry
-            # else:
-            #     # logging.debug(entry)
-            #     pass
-
     except MemoryError:
         msg = f"mem error for ast {entry}: {MemoryError.args}"
         logging.error(msg)
@@ -111,21 +104,3 @@ def program_analysis_logRE(project_name, db_port):
     print("All:",len(entries))
     print("Done:",len(results))
 
-# if __name__ == "__main__":
-    
-#     project_name = 'salt'
-#     db_port = 27017
-#     log_location = datetime.now().strftime('logs/salt_%Y_%m_%d_%H_%M.log')
-#     logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(levelname)s %(message)s')
-#     ast_root_dir = f'{project_name}-ast'
-#     entries= get_module_names(ast_root_dir, '.txt')
-#     log_file = "salt_unit"
-#     thread_id_index = 1
-#     coll_log_seq = db.Connect.get_connection(db_port).get_database(project_name).get_collection("log_sequence")
-
-#     # process_log.log_to_db(log_file, project_name, thread_id_index, db_port)
-#     log_sequence = coll_log_seq.find_one({"log_sequence": {"$exists": True}})
-    
-#     for key, value in log_sequence.items():
-#         print(key)
-   

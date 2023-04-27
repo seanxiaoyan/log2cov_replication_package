@@ -524,144 +524,13 @@ class slicer(gast.NodeVisitor):
         if not doc:
             return 
         
-        if doc and doc['covered'] != "Must":
-            return
-           
-        # '''
-        # get resolvable may coverage
-        # '''
-        # branch_selection = True
-        
-        # fun_ast_location = self.get_fn_ast_path(node)
-        # if not fun_ast_location:
-        #     print(f"AST file not found: {fun_ast_location}")
+        # if doc and doc['covered'] != "Must":
         #     return
-
-        # if not os.path.exists(fun_ast_location):
-        #     # remove the dir __init__ from the fun_ast_location
-        #     f = fun_ast_location.rsplit(".",1)[0].split(os.path.sep)
-        #     f_no_init = [i for i in f if i != '__init__']
-        #     path_without_init = os.path.join(*f_no_init) + ".txt"   
-
-        #     if not os.path.exists(path_without_init):
-        #         return
-        #     else:
-        #         fun_ast_location = path_without_init
-    
-        
-        # ast = graph_traversal.get_ast(fun_ast_location)
-
-        # lineno = node.lineno
-        # coverage = get_if_coverage.Coverage_If(target_lineno=lineno, module_name=self.module_name, db=self.db, branch_selection=branch_selection) # input lineno
-        # coverage.visit(ast) #input function ast
-
-        
-        """
-        Get valid if coverage
-        """
-        name_nodes = set() # contains only locally defined variable's Name nodes
-
-        # init for the current if stmt
-        self.op_is_or = False
-        self.if_stmt_lineno = node.lineno
-
-        # find name nodes in the test node of if stmt
-        # if test node is Name node, no need to find compare node
-        if isinstance(node.test, gast.Name):
-            # check if this name node is locally defined
-            if node.test.id not in self.builtins:
-                name_nodes.add(node.test)
-    
-        # if test node is BoolOp node check if the op is Or
-        elif isinstance(node.test, gast.BoolOp): # test is multiple conditions
-            if isinstance(node.test.op, gast.Or):
-                self.op_is_or = True
-                # list of set of name nodes, each list contains name nodes in one compare node
-                list_of_name_nodes = []
-                for compare in node.test.values:
-                    name_nodes_in_compare = set()
-                    for n in gast.walk(compare):
-                        if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
-                            continue
-                        if isinstance(n, gast.Name) and n.id not in self.builtins and n.id != "self":
-                            name_nodes_in_compare.add(n)
-                        
-
-                    list_of_name_nodes.append(name_nodes_in_compare)      
-            else:
-                for n in gast.walk(node.test):
-                    if isinstance(n, gast.Name) and n.id not in self.builtins and n.id != "self":
-                        name_nodes.add(n)
-                    if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
-                        return
-
-        elif isinstance(node.test, gast.Compare):
-
-            for n in gast.walk(node.test):
-                if isinstance(n, gast.Name) and n.id not in self.builtins and n.id and n.id != "self":
-                    name_nodes.add(n)
-                if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
-                    return
-                    
-        # if the test node is attribute, check the attribute
-        elif isinstance(node.test, gast.Attribute) and not self.check_attr_node(node.test):
-            return
-
-        else:
-            # print("test node is not Name or BoolOp or Compare", self.module_name, node.lineno)
-            return
-
-        """
-        check if var is defined
-        """
-
-        # (re)initialize the var assignment map for the current if stmt
-        self.var_assign_map = OrderedDict()
-
-        if self.op_is_or: # use list_of_name_nodes
-            op_valid = False
-
-            if len(node.test.values) != len(list_of_name_nodes):
-                # print("len(node.test.values) != len(list_of_name_nodes)")
-                return 
-
-            for i in range(len(node.test.values)):
-                compare = node.test.values[i]
-                n_nodes_of_compare = list_of_name_nodes[i]
-                for n in n_nodes_of_compare:
-                    self.get_assignment_node(n) 
-                    
-                
-                if_stmt_eval_result = self.eval_if_stmt(compare)
-                if if_stmt_eval_result == -1 :
-
-                    return
-                else:
-                    op_valid = True
-                    break
-
-            if not op_valid:
-                return
-            
-
-            
-        else: # use name_nodes
-            for n in name_nodes: # ******* 
-                self.get_assignment_node(n) 
-                
-            for n in name_nodes:
-                if n.id not in self.var_assign_map:
-                    return
-            
-            if_stmt_eval_result = self.eval_if_stmt(node.test)
-            if if_stmt_eval_result == -1 :
-                # print(f"not evaluable if stmt: {location}")
-                return
-        
-        if if_stmt_eval_result == 2:
-            branch_selections = [True, False]
-        else:
-            branch_selections = [True] if if_stmt_eval_result == 1 else [False]
+           
+        '''
+        get resolvable may coverage
+        '''
+        branch_selection = True
         
         fun_ast_location = self.get_fn_ast_path(node)
         if not fun_ast_location:
@@ -681,11 +550,142 @@ class slicer(gast.NodeVisitor):
     
         
         ast = graph_traversal.get_ast(fun_ast_location)
-        lineno = node.lineno
 
-        for branch_selection in branch_selections:
-            coverage = get_if_coverage.Coverage_If(target_lineno=lineno, module_name=self.module_name, db=self.db, branch_selection=branch_selection) # input lineno
-            coverage.visit(ast) #input function ast
+        lineno = node.lineno
+        coverage = get_if_coverage.Coverage_If(target_lineno=lineno, module_name=self.module_name, db=self.db, branch_selection=branch_selection) # input lineno
+        coverage.visit(ast) #input function ast
+
+        
+        # """
+        # Get valid if coverage
+        # """
+        # name_nodes = set() # contains only locally defined variable's Name nodes
+
+        # # init for the current if stmt
+        # self.op_is_or = False
+        # self.if_stmt_lineno = node.lineno
+
+        # # find name nodes in the test node of if stmt
+        # # if test node is Name node, no need to find compare node
+        # if isinstance(node.test, gast.Name):
+        #     # check if this name node is locally defined
+        #     if node.test.id not in self.builtins:
+        #         name_nodes.add(node.test)
+    
+        # # if test node is BoolOp node check if the op is Or
+        # elif isinstance(node.test, gast.BoolOp): # test is multiple conditions
+        #     if isinstance(node.test.op, gast.Or):
+        #         self.op_is_or = True
+        #         # list of set of name nodes, each list contains name nodes in one compare node
+        #         list_of_name_nodes = []
+        #         for compare in node.test.values:
+        #             name_nodes_in_compare = set()
+        #             for n in gast.walk(compare):
+        #                 if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
+        #                     continue
+        #                 if isinstance(n, gast.Name) and n.id not in self.builtins and n.id != "self":
+        #                     name_nodes_in_compare.add(n)
+                        
+
+        #             list_of_name_nodes.append(name_nodes_in_compare)      
+        #     else:
+        #         for n in gast.walk(node.test):
+        #             if isinstance(n, gast.Name) and n.id not in self.builtins and n.id != "self":
+        #                 name_nodes.add(n)
+        #             if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
+        #                 return
+
+        # elif isinstance(node.test, gast.Compare):
+
+        #     for n in gast.walk(node.test):
+        #         if isinstance(n, gast.Name) and n.id not in self.builtins and n.id and n.id != "self":
+        #             name_nodes.add(n)
+        #         if isinstance(n, gast.Attribute) and not self.check_attr_node(n):
+        #             return
+                    
+        # # if the test node is attribute, check the attribute
+        # elif isinstance(node.test, gast.Attribute) and not self.check_attr_node(node.test):
+        #     return
+
+        # else:
+        #     # print("test node is not Name or BoolOp or Compare", self.module_name, node.lineno)
+        #     return
+
+        # """
+        # check if var is defined
+        # """
+
+        # # (re)initialize the var assignment map for the current if stmt
+        # self.var_assign_map = OrderedDict()
+
+        # if self.op_is_or: # use list_of_name_nodes
+        #     op_valid = False
+
+        #     if len(node.test.values) != len(list_of_name_nodes):
+        #         # print("len(node.test.values) != len(list_of_name_nodes)")
+        #         return 
+
+        #     for i in range(len(node.test.values)):
+        #         compare = node.test.values[i]
+        #         n_nodes_of_compare = list_of_name_nodes[i]
+        #         for n in n_nodes_of_compare:
+        #             self.get_assignment_node(n) 
+                    
+                
+        #         if_stmt_eval_result = self.eval_if_stmt(compare)
+        #         if if_stmt_eval_result == -1 :
+
+        #             return
+        #         else:
+        #             op_valid = True
+        #             break
+
+        #     if not op_valid:
+        #         return
+            
+
+            
+        # else: # use name_nodes
+        #     for n in name_nodes: # ******* 
+        #         self.get_assignment_node(n) 
+                
+        #     for n in name_nodes:
+        #         if n.id not in self.var_assign_map:
+        #             return
+            
+        #     if_stmt_eval_result = self.eval_if_stmt(node.test)
+        #     if if_stmt_eval_result == -1 :
+        #         print(f"not evaluable if stmt: {location}")
+        #         return
+        
+        # if if_stmt_eval_result == 2:
+        #     branch_selections = [True, False]
+        # else:
+        #     branch_selections = [True] if if_stmt_eval_result == 1 else [False]
+        
+        # fun_ast_location = self.get_fn_ast_path(node)
+        # if not fun_ast_location:
+        #     print(f"AST file not found: {fun_ast_location}")
+        #     return
+
+        # if not os.path.exists(fun_ast_location):
+        #     # remove the dir __init__ from the fun_ast_location
+        #     f = fun_ast_location.rsplit(".",1)[0].split(os.path.sep)
+        #     f_no_init = [i for i in f if i != '__init__']
+        #     path_without_init = os.path.join(*f_no_init) + ".txt"   
+
+        #     if not os.path.exists(path_without_init):
+        #         return
+        #     else:
+        #         fun_ast_location = path_without_init
+    
+        
+        # ast = graph_traversal.get_ast(fun_ast_location)
+        # lineno = node.lineno
+
+        # for branch_selection in branch_selections:
+        #     coverage = get_if_coverage.Coverage_If(target_lineno=lineno, module_name=self.module_name, db=self.db, branch_selection=branch_selection) # input lineno
+        #     coverage.visit(ast) #input function ast
             
 
                                                   
@@ -724,7 +724,7 @@ class slicer(gast.NodeVisitor):
 
 
 def process_file(source_filename, project_name, db_name, project_root_dir, reversed_call_graph_path, call_graph_path):
-    db_ = db.Connect.get_connection().get_database(db_name)
+    db_ = db.Connect.get_connection().get_database(db_name + '_docker')
     with open(source_filename) as f:
         code = f.read()
     try:

@@ -179,7 +179,7 @@ def update_coverage_db(project_name, db_port):
             if not set_list:
                 print(f"logRE: {logRE} | regex:  f'^(\(*{logRE_regex}\)*(\+)*)+$'")
                 continue
-            must_coverage = list(set.union(*set_list))
+            must_coverage = list(set.intersection(*set_list))
             for location in must_coverage:
                 # update or insert the covered field to Must
                 coverage.update_one({'location': location}, {'$set': {'covered': 'Must'}}, upsert=True)
@@ -232,8 +232,10 @@ def update_coverage_db(project_name, db_port):
             # rewind cursor_dup_logRE
             cursor_dup_logRE.rewind()
             may_cov_all = set()
+            may_list = []
             for dup_logRE in cursor_dup_logRE:
-                may_cov_all = may_cov_all.union(set(dup_logRE['may_coverage']))
+                may_list.append(set(dup_logRE['may_coverage']))
+            may_cov_all = set.intersection(*may_list)
             must_not_all = set.union(*set_list)
             may_cov_all = may_cov_all - must_not_all
             for location in may_cov_all:

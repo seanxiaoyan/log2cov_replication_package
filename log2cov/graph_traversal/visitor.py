@@ -677,10 +677,7 @@ class newVisitor(ast.NodeVisitor):
 
       else:
         for i in visitor_log:
-          # str_repr = seq_to_string(i)
-          # if str_repr not in uniq_seq:
             new_log.append(i)
-            # uniq_seq.add(str_repr)
         if visitor2_log:
           for i in visitor2_log:
             # str_repr = seq_to_string(i)

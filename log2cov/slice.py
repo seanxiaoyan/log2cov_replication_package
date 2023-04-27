@@ -29,10 +29,15 @@ if __name__ == "__main__":
     # call_graph_location = "log2cov-out/call_graph/nova.json"
     # project_root_dir = '/projects/nova'
 
-    project_name = 'homeassistant'
-    db_name = "homeassistant_unit_initial"
-    call_graph_location = 'log2cov-out/call_graph/homeassistant.json'
-    project_root_dir = '/projects/core'
+    # project_name = 'homeassistant'
+    # db_name = "homeassistant_unit_initial"
+    # call_graph_location = 'log2cov-out/call_graph/homeassistant.json'
+    # project_root_dir = '/projects/core'
+
+    project_name = 'salt'
+    db_name = 'salt'
+    call_graph_location = '/log2cov/log2cov-out/call_graph/salt.json'
+    project_root_dir = '/projects/salt/'
 
   
 

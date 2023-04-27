@@ -2,6 +2,7 @@ import db
 import xml.etree.ElementTree as ET
 import pymongo 
 import os
+import multiprocessing
 
 port = os.environ.get("MONGO_PORT")
 
@@ -130,4 +131,166 @@ def validate_coverage(flag, project_name, coverage_db_name, test_type=None):
         print(f"Percentage of May that is covered (no ground truth as not May): {100 * round(count_mis_flag/(num_may-no_ground_truth), 2)}%\n")
 
 
+def enrich_db():
+    db_unit = db.Connect.get_connection().get_database('salt_docker')
+    print("salt_docker")
+    db.get_coverage_stats('salt_docker')
+    print("salt_maven")
+    db.get_coverage_stats('salt')
+    coll_workload1 = db_unit.get_collection('coverage')
+    pool = multiprocessing.Pool(processes=8)
+    cursor = coll_workload1.find()
+    # process_coverage_partial = partial(process_coverage, workload2_db_name = 'salt_unit')
+    result = pool.map(compare_coverage, list(chunks(list(cursor),1000)))
+    pool.close()
+    pool.join()
 
+
+    must_must = 0
+    must_may = 0
+    must_no = 0
+    may_must = 0
+    may_may = 0
+    may_no = 0
+    no_must = 0
+    no_may = 0
+    no_no = 0
+
+    for i in result:
+        must_must += i['must_must']
+        must_may += i['must_may']
+        must_no += i['must_no']
+        may_must += i['may_must']
+        may_may += i['may_may']
+        may_no += i['may_no']
+        no_must += i['no_must']
+        no_may += i['no_may']
+        no_no += i['no_no']
+
+
+    print("must_must", must_must)
+    print("must_may", must_may)
+    print("must_no", must_no)
+    print("may_must", may_must)
+    print("may_may", may_may)
+    print("may_no", may_no)
+    print("no_must", no_must)
+    print("no_may", no_may)
+    print("no_no", no_no)
+
+def compare_coverage(chunk):
+    client = db.connect.Connect.get_connection()
+    integration_coverage = client.get_database('salt').get_collection('coverage')
+    
+
+    dic = {
+        'must_must': 0,
+        'must_may': 0,
+        'must_no': 0,
+        'may_must': 0,
+        'may_may': 0,
+        'may_no': 0,
+        'no_must': 0,
+        'no_may': 0,
+        'no_no': 0
+        
+    }
+
+    # for each document in the chunk. compare it with the document in other db
+    for document_unit in chunk:
+        location_unit = document_unit['location']
+        covered_unit = document_unit['covered']
+        doc_integration = integration_coverage.find_one({'location': location_unit})
+        if not doc_integration:
+            if covered_unit == 'Must':
+                dic['must_no'] += 1
+            elif covered_unit == 'May':
+                dic['may_no'] += 1
+            else:
+                dic['no_no'] += 1
+            continue
+
+
+        covered_integration = doc_integration['covered']
+
+
+        if covered_unit == 'Must':
+            if covered_integration == 'Must':
+                
+                    dic['must_must'] += 1
+
+            elif covered_integration == 'No':
+                    dic['must_no'] += 1
+            elif covered_integration == 'May':
+                    dic['must_may'] += 1
+                    # dic['integration_may_only'] += 1
+        elif covered_unit == 'May': #  may be covered in unit
+            if covered_integration == 'Must':
+             
+                    dic['may_must'] += 1
+                    # dic['unit_may_only'] += 1
+
+            elif covered_integration == 'No':
+                    dic['may_no'] += 1
+
+            elif covered_integration == 'May':
+                    dic['may_may'] += 1
+                    
+        else:
+            if covered_integration == 'Must':
+             
+                    dic['no_must'] += 1
+
+            elif covered_integration == 'No':
+                    dic['no_no'] += 1
+
+            elif covered_integration == 'May':
+                    dic['no_may'] += 1
+
+    return dic     
+
+def chunks(l, n):
+    for i in range(0, len(l), n):
+        yield l[i:i + n]
+
+def process_coverage(db_workload_1, db_workload_2):
+    # add the location that is in workload1 db but not in workload2 db
+
+    docs_1 = db_workload_1.find()
+    docs_2 = db_workload_2.find()
+
+    docs_to_insert_to_2 = []
+    for doc_workload1 in docs_1:
+        location = doc_workload1['location']
+        doc_workload2 = db_workload_2.find_one({'location': location})
+        if doc_workload2:
+            continue
+        doc = {
+            'location': location,
+            'covered': 'No',
+        }
+        docs_to_insert_to_2.append(doc)
+    if docs_to_insert_to_2: 
+        db_workload_2.insert_many(docs_to_insert_to_2)
+    
+    docs_to_insert_to_1 = []
+    for doc_workload2 in docs_2:
+        location = doc_workload2['location']
+        doc_workload1 = db_workload_1.find_one({'location': location})
+        if doc_workload1:
+            continue
+        doc = {
+            'location': location,
+            'covered': 'No',
+        }
+        docs_to_insert_to_1.append(doc)
+    if docs_to_insert_to_1:
+        db_workload_1.insert_many(docs_to_insert_to_1)
+
+    return 1
+
+if __name__ == '__main__':
+    # db_docker = db.Connect.get_connection().get_database('salt_docker')
+    # db_nginx = db.Connect.get_connection().get_database('salt')
+    # process_coverage(db_docker.get_collection('coverage'), db_nginx.get_collection('coverage'))
+    enrich_db()

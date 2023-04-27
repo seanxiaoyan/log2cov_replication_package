@@ -82,17 +82,25 @@ if __name__ == "__main__":
     # test_dir = "/projects/core/tests"
     # modules_dir = os.path.join(project_root_dir, project_name)
 
-    '''Homeassistant Unit with Remove Dependency'''
-    project_name = 'homeassistant'
-    call_graph_location = '/data/homeassistant.json'
-    log_file = "/data/homeassistant.log"
+    # '''Homeassistant Unit with Remove Dependency'''
+    # project_name = 'homeassistant'
+    # call_graph_location = '/data/homeassistant.json'
+    # log_file = "/data/homeassistant.log"
+    # thread_id_index = 4 
+    # remove_patched_dependency = True
+    # project_root_dir = '/projects/core'
+    # test_dir = "/projects/core/tests"
+    # modules_dir = os.path.join(project_root_dir, project_name)
+
+    '''workload'''
+    project_name = 'salt'
+    call_graph_location = '/data/salt.json'
+    log_file = "/data/docker-log/docker.log"
     thread_id_index = 4 
-    remove_patched_dependency = True
-    project_root_dir = '/projects/core'
-    test_dir = "/projects/core/tests"
+    remove_patched_dependency = False
+    project_root_dir = '/projects/salt'
+    test_dir = "/projects/salt/tests/unit"
     modules_dir = os.path.join(project_root_dir, project_name)
-
-
 
 
     print("*** clean old output ***")

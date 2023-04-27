@@ -21,7 +21,7 @@ services:
       - 5000:5000
     volumes:
       - ./log2cov:/log2cov
-      - ./data:/data
+      - /home/x439xu/workload/salt-logs:/data
       - ./projects:/projects
       - ./db_backup:/db_backup
     environment:

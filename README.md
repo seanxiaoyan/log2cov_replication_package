@@ -51,7 +51,7 @@ python3 rq2_result.py
 
 <!-- For example, a database called "salt" is what you get from log2cov for the salt system. If this is for unit test coverage without Remove Dependency, you can use mongodump and mongorestore to rename the database to "salt_unit_initial", as following commands: -->
 mongodump --uri "mongodb://mongo:27017/" --db salt --out ./
-mongorestore --uri "mongodb://mongo:27017/" --db salt_unit_initial ./salt
+mongorestore --uri "mongodb://mongo:27017/" --db salt_docker ./salt
 
 # Reproduce RQ1 data
 1. cd /log2cov
