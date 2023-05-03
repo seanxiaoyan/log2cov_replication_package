@@ -181,7 +181,8 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
       'logRE': logRE,
       'coverage': list(code_path),
       'may_coverage': list(may_coverage),
-      'must_not_coverage': non_covered
+      'must_not_coverage': non_covered,
+      'entry': filepath
     }
    
     docs.append(doc)

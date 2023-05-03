@@ -290,7 +290,7 @@ def process_coverage(db_workload_1, db_workload_2):
     return 1
 
 if __name__ == '__main__':
-    # db_docker = db.Connect.get_connection().get_database('salt_docker')
-    # db_nginx = db.Connect.get_connection().get_database('salt')
-    # process_coverage(db_docker.get_collection('coverage'), db_nginx.get_collection('coverage'))
+    db_docker = db.Connect.get_connection().get_database('salt_docker')
+    db_nginx = db.Connect.get_connection().get_database('salt')
+    process_coverage(db_docker.get_collection('coverage'), db_nginx.get_collection('coverage'))
     enrich_db()

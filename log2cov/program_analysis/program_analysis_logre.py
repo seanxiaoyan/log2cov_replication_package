@@ -57,7 +57,7 @@ def traverse_AST(entry, log_seq, project_name, port_number):
         logging.error(msg)
     
     
-def program_analysis_logRE(project_name, db_port):
+def program_analysis_logRE(project_name, db_port, entry = None):
 
     # setup logging
 
@@ -68,17 +68,23 @@ def program_analysis_logRE(project_name, db_port):
     logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(levelname)s %(message)s')
 
     # get ast files
-    ast_root_dir = os.path.join("log2cov-out", "AST", project_name)
-    entries= get_file_path_all(ast_root_dir, 'txt')
+    if entry is None:
+        ast_root_dir = os.path.join("log2cov-out", "AST", project_name)
+        entries= get_file_path_all(ast_root_dir, 'txt')
+        
+        # create index for logRE collection
+        db_logRE = db.Connect.get_connection().get_database(project_name).get_collection("logRE")
+        db_logRE.create_index([("logRE", pymongo.ASCENDING)])
+        db_logRE.create_index([("entry", pymongo.ASCENDING)])
+    else:
+        entries = entry
 
     # get log sequence
     log_seq_path = os.path.join("log2cov-out", "log_sequence", project_name, "log_seq.txt")
     with open(log_seq_path, 'r') as f:
         log_seq = f.read()
 
-    # create index for field: logRE in collection logRE
-    db_logRE = db.Connect.get_connection().get_database(project_name).get_collection("logRE")
-    db_logRE.create_index([("logRE", pymongo.ASCENDING)])
+    
 
     # Traverse ASTs and update coverage db, max time 120 seconds for each traversal 
     results = []

@@ -6,96 +6,16 @@ import db
 import mocking.mock_solution as mock_solution
 import os
 import pymongo
+import sys 
 
 if __name__ == "__main__":
     db_port = os.environ.get("MONGO_PORT")
 
-    '''Salt Unit'''
-    # project_name = 'salt'
-    # call_graph_location = '/data/salt.json'
-    # log_file = "/data/salt_unit.log"
-    # thread_id_index = 3 
-    # remove_patched_dependency = False
-    # project_root_dir = '/projects/salt'
-    # test_dir = "/projects/salt/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-    
-
-    '''Salt Unit with Remove Dependency'''
-    # project_name = 'salt'
-    # call_graph_location = '/data/salt.json'
-    # log_file = "/data/salt_unit.log"
-    # thread_id_index = 3 
-    # remove_patched_dependency = True
-    # project_root_dir = '/projects/salt'
-    # test_dir = "/projects/salt/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    
-    '''Salt Integration'''
-    # project_name = 'salt'
-    # call_graph_location = '/data/salt.json'
-    # log_file = "/data/salt_integration.log"
-    # thread_id_index = 3 
-    # remove_patched_dependency = False
-    # project_root_dir = '/projects/salt'
-    # test_dir = "/projects/salt/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    '''Nova Unit'''
-    # project_name = 'nova'
-    # call_graph_location = '/data/nova.json'
-    # log_file = "/data/nova_unit.log"
-    # thread_id_index = 4 
-    # remove_patched_dependency = False
-    # project_root_dir = '/projects/nova'
-    # test_dir = "/projects/nova/nova/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    '''Nova Unit with Remove Dependency'''
-    # project_name = 'nova'
-    # call_graph_location = '/data/nova.json'
-    # log_file = "/data/nova_unit.log"
-    # thread_id_index = 4 
-    # remove_patched_dependency = True
-    # project_root_dir = '/projects/nova'
-    # test_dir = "/projects/nova/nova/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    '''Nova Functional'''
-    # project_name = 'nova'
-    # call_graph_location = '/data/nova.json'
-    # log_file = "/data/nova_functional.log"
-    # thread_id_index = 4 
-    # remove_patched_dependency = True
-    # project_root_dir = '/projects/nova'
-    # test_dir = "/projects/nova/nova/tests/unit"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    '''Homeassistant Unit'''
-    # project_name = 'homeassistant'
-    # call_graph_location = '/data/homeassistant.json'
-    # log_file = "/data/homeassistant.log"
-    # thread_id_index = 4 
-    # remove_patched_dependency = False
-    # project_root_dir = '/projects/core'
-    # test_dir = "/projects/core/tests"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
-    # '''Homeassistant Unit with Remove Dependency'''
-    # project_name = 'homeassistant'
-    # call_graph_location = '/data/homeassistant.json'
-    # log_file = "/data/homeassistant.log"
-    # thread_id_index = 4 
-    # remove_patched_dependency = True
-    # project_root_dir = '/projects/core'
-    # test_dir = "/projects/core/tests"
-    # modules_dir = os.path.join(project_root_dir, project_name)
-
     '''workload'''
     project_name = 'salt'
     call_graph_location = '/data/salt.json'
-    log_file = "/data/docker-log/docker.log"
+    # log_file = "/data/maven-log/salt/maven_log"
+    log_file = sys.argv[1]
     thread_id_index = 4 
     remove_patched_dependency = False
     project_root_dir = '/projects/salt'
