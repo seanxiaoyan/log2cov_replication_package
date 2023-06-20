@@ -1,14 +1,6 @@
 import re 
-import sys
 import os
-from time import thread_time 
-import db 
-import pymongo
-'''
-Given a log file that has at least these components: file@lineno, thread id
-    and components are speparated by single space.
-Produce a map that maps thread id to log sequence.
-'''
+
 
 
 def get_regex_alternative_group(source_code_root):
@@ -28,7 +20,7 @@ def get_regex_alternative_group(source_code_root):
         else:
             # this is dir
             name = i.split(".")[0]
-            group += f"{name}\.|"
+            group += f"{name}|{name}\.|"
 
     group = group[:-1]
     group += ")"
@@ -39,10 +31,8 @@ def get_log_sequence(log_file, project_name, alternative_group, thread_id_index)
     Function to get the log sequence from a log file.
     return a map that the key is the thread id and value is the log sequence of that thread id 
     '''
-
     log_seq_map = {} # key: thread id, value: log sequence
-
-    pattern = f"\s\[{project_name}\.{alternative_group}(\D+)?@([0-9])+\]\s"
+    pattern = f"\[{project_name}\.{alternative_group}[.\w]*@([0-9]+)\]"
     p = re.compile(pattern)
     with open(log_file, 'r') as f:
         for line in f:
@@ -59,16 +49,16 @@ def get_log_sequence(log_file, project_name, alternative_group, thread_id_index)
                     log_seq_map[thread_id] = result
                 else:
                     log_seq_map[thread_id] += result
-            
 
+             
             
     # adding extra space in the end of log sequence because we use "\D" in matching logRE
-
     res_map = {}
     for key, value in log_seq_map.items():
         res_map[key] = value + " "
 
     return res_map
+
 
 
 
@@ -89,8 +79,6 @@ def dump_log_seq(log_file, project_root_dir, project_name, thread_id_index):
         # key: thread id, value: log sequence
         log_sequence += value
 
-    # create dir if not exist
-    if not os.path.exists(f"log2cov-out/log_sequence/{project_name}"):
-        os.makedirs(f"log2cov-out/log_sequence/{project_name}")
-    with open(f"log2cov-out/log_sequence/{project_name}/log_seq.txt", 'w+') as f:
+
+    with open(f"log_seq.txt", 'w+') as f:
         f.write(log_sequence)

@@ -3,6 +3,7 @@ import xml.etree.ElementTree as ET
 import pymongo 
 import os
 import multiprocessing
+import config 
 
 port = os.environ.get("MONGO_PORT")
 
@@ -135,8 +136,8 @@ def enrich_db():
     db_unit = db.Connect.get_connection().get_database('salt_docker')
     print("salt_docker")
     db.get_coverage_stats('salt_docker')
-    print("salt_maven")
-    db.get_coverage_stats('salt')
+    print("salt_statusnet")
+    db.get_coverage_stats('salt_statusnet')
     coll_workload1 = db_unit.get_collection('coverage')
     pool = multiprocessing.Pool(processes=8)
     cursor = coll_workload1.find()
@@ -180,7 +181,7 @@ def enrich_db():
 
 def compare_coverage(chunk):
     client = db.connect.Connect.get_connection()
-    integration_coverage = client.get_database('salt').get_collection('coverage')
+    integration_coverage = client.get_database('salt_statusnet').get_collection('coverage')
     
 
     dic = {
@@ -271,8 +272,11 @@ def process_coverage(db_workload_1, db_workload_2):
         }
         docs_to_insert_to_2.append(doc)
     if docs_to_insert_to_2: 
-        db_workload_2.insert_many(docs_to_insert_to_2)
-    
+        try:
+            db_workload_2.insert_many(docs_to_insert_to_2)
+        except pymongo.errors.BulkWriteError as e:
+            pass 
+
     docs_to_insert_to_1 = []
     for doc_workload2 in docs_2:
         location = doc_workload2['location']
@@ -285,12 +289,15 @@ def process_coverage(db_workload_1, db_workload_2):
         }
         docs_to_insert_to_1.append(doc)
     if docs_to_insert_to_1:
-        db_workload_1.insert_many(docs_to_insert_to_1)
+        try:
+            db_workload_1.insert_many(docs_to_insert_to_1)
+        except pymongo.errors.BulkWriteError as e:
+            pass
 
     return 1
 
 if __name__ == '__main__':
     db_docker = db.Connect.get_connection().get_database('salt_docker')
-    db_nginx = db.Connect.get_connection().get_database('salt')
-    process_coverage(db_docker.get_collection('coverage'), db_nginx.get_collection('coverage'))
+    db_maven = db.Connect.get_connection().get_database('salt_statusnet')
+    process_coverage(db_docker.get_collection('coverage'), db_maven.get_collection('coverage'))
     enrich_db()

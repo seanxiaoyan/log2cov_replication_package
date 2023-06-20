@@ -10,7 +10,7 @@ import pymongo
 import db
 from utils.get_module_names import get_file_path_all
 from datetime import datetime
-
+import config
 
 def mongodb_insert_many(db_logRE, docs):
 
@@ -26,10 +26,10 @@ def mongodb_insert_many(db_logRE, docs):
         return "encounter duplication"
 
 
-def traverse_AST(entry, log_seq, project_name, port_number):
+def traverse_AST(entry, log_seq):
 
     client = db.Connect.get_connection()
-    db_logRE = client.get_database(project_name).get_collection("logRE")
+    db_logRE = client.get_database(config.DB_NAME).get_collection("logRE")
    
 
     if not os.path.exists(entry):
@@ -57,7 +57,7 @@ def traverse_AST(entry, log_seq, project_name, port_number):
         logging.error(msg)
     
     
-def program_analysis_logRE(project_name, db_port, entry = None):
+def program_analysis_logRE(project_name, entry = None):
 
     # setup logging
 
@@ -73,7 +73,7 @@ def program_analysis_logRE(project_name, db_port, entry = None):
         entries= get_file_path_all(ast_root_dir, 'txt')
         
         # create index for logRE collection
-        db_logRE = db.Connect.get_connection().get_database(project_name).get_collection("logRE")
+        db_logRE = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("logRE")
         db_logRE.create_index([("logRE", pymongo.ASCENDING)])
         db_logRE.create_index([("entry", pymongo.ASCENDING)])
     else:
@@ -81,6 +81,7 @@ def program_analysis_logRE(project_name, db_port, entry = None):
 
     # get log sequence
     log_seq_path = os.path.join("log2cov-out", "log_sequence", project_name, "log_seq.txt")
+    # log_seq_path = config.LOG_SEQ_PATH
     with open(log_seq_path, 'r') as f:
         log_seq = f.read()
 
@@ -89,7 +90,7 @@ def program_analysis_logRE(project_name, db_port, entry = None):
     # Traverse ASTs and update coverage db, max time 120 seconds for each traversal 
     results = []
     with ProcessPool(max_workers=8) as pool:
-         future = pool.map(traverse_AST, entries, repeat(log_seq), repeat(project_name), repeat(db_port), timeout=120)
+         future = pool.map(traverse_AST, entries, repeat(log_seq), timeout=120)
          iterator = future.result()
 
          # iterate over all results, if a computation timed out

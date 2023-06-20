@@ -5,8 +5,9 @@ from itertools import repeat
 import concurrent.futures 
 import db 
 import pymongo
+import config
 
-def program_analysis_AST(project_name, project_root_dir, call_graph_location, port_number, mods = None):
+def program_analysis_AST(project_name, project_root_dir, call_graph_location, mods = None):
     """
     Construct AST for each function in the source code
     """
@@ -16,9 +17,9 @@ def program_analysis_AST(project_name, project_root_dir, call_graph_location, po
     if mods is None:
         modules = utils.get_file_path_all(p, 'py')
         # coverage database
-        db_coverage = db.Connect.get_connection().get_database(project_name).get_collection("coverage")
+        db_coverage = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("coverage")
         # global_coverage database
-        db_global_coverage = db.Connect.get_connection().get_database(project_name).get_collection("global_coverage")
+        db_global_coverage = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("global_coverage")
 
         # create Coumpund Index for  coverage database
         db_coverage.create_index([("location", pymongo.ASCENDING),("covered",pymongo.ASCENDING )], unique=True)
@@ -28,7 +29,7 @@ def program_analysis_AST(project_name, project_root_dir, call_graph_location, po
         # create Index for field: module_name in global_coverage database
         db_global_coverage.create_index([("module_name", pymongo.ASCENDING)], unique=True)
     else:
-        modules = [os.path.join(p, i) for i in mods]
+        modules = mods
 
     
     # check call graph
@@ -45,7 +46,7 @@ def program_analysis_AST(project_name, project_root_dir, call_graph_location, po
     # build AST
     with concurrent.futures.ProcessPoolExecutor() as executor:
         
-        for r in executor.map(utils.process_file, modules, repeat(call_graph_location), repeat(project_root_dir), repeat(port_number), repeat(project_name)):
+        for r in executor.map(utils.process_file, modules, repeat(call_graph_location), repeat(project_root_dir), repeat(project_name)):
             try:
                 print(r)
             except Exception as e:

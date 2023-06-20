@@ -5,8 +5,9 @@ FROM python:3.9-slim-buster
 WORKDIR /log2cov
 COPY ./requirements.txt /log2cov/requirements.txt
 
-# Install requirements.txt
+# Install requirements
 RUN pip install --trusted-host pypi.python.org -r requirements.txt
+RUN pip install requests
 
 # Set mongodb database tools
 COPY ./mongodb-database-tools-debian10-x86_64-100.5.2 /mongodb-database-tools-debian10-x86_64-100.5.2

@@ -2,8 +2,8 @@ import ast
 import os 
 import utils
 import db 
-import pymongo 
-
+from pymongo.errors import DuplicateKeyError
+import config
 
 
 def parse_ast(filename):
@@ -31,6 +31,18 @@ def write_to_file(func_path_dot, ast_content, project_name):
     output_file.write(ast_content)
     output_file.close()
 
+    if config.TASK_NAME:
+        # remove the logRe associated to the output_name in the database because we are going to update it
+        db_ = db.Connect.get_connection().get_database(config.DB_NAME)
+        coll_logRE = db_.get_collection("logRE")
+        result = coll_logRE.delete_many({"entry": output_name})
+
+        coll_new_entries = db_.get_collection("new_entries")
+        doc_new_entry = {"entry": output_name}
+        try:
+            coll_new_entries.insert_one(doc_new_entry)
+        except DuplicateKeyError:
+            pass    
 
 def construct_ast(func, mod_path_dot, project_name):
     if ast.dump(func,include_attributes=True):
@@ -68,7 +80,7 @@ def insert_lineno_method(coll, docs):
 
 
 
-def process_file(source_filepath, json_filename, project_root_dir, port_number, project_name):
+def process_file(source_filepath, json_filename, project_root_dir, project_name):
     # print("**********  processing {} **********".format(source_filename))
 
     tree = parse_ast(source_filepath) # an ast tree for the source file
@@ -81,7 +93,9 @@ def process_file(source_filepath, json_filename, project_root_dir, port_number, 
     if module_name.endswith("__init__"):
             module_name = ".".join(module_name.split(".")[:-1])
     
-    global_coverage_db = db.Connect.get_connection().get_database(project_name).get_collection("global_coverage")
+    global_coverage_db = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("global_coverage")
+    # # remove doc in global_coverage db if it exists
+    # global_coverage_db.delete_many({"module_name": module_name})
     # global statements to db
     utils.global_statements_to_db(tree, module_name, global_coverage_db)
 

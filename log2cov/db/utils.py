@@ -3,8 +3,7 @@ import db.connect as connect
 # import connect
 from pprint import pprint
 import pymongo
-
-
+import config
 
 def view_collections(db):
     print(db.list_collection_names())
@@ -12,12 +11,19 @@ def view_collections(db):
 def view_doc_count(coll):
     return coll.count_documents({})
 
-def clean_db(project_name, db_port):
+def clean_db(project_name):
     '''
     Delete the database if it exists
     '''
     client = connect.Connect.get_connection()
     client.drop_database(project_name)
+
+def clean_collection(db_name, coll_name):
+    '''
+    Delete the collection if it exists
+    '''
+    client = connect.Connect.get_connection()
+    client.get_database(db_name).drop_collection(coll_name)
 
 
 
@@ -135,12 +141,12 @@ def check_coverage_location(db, location):
         
 
 
-def update_coverage_db(project_name, db_port):
+def update_coverage_db():
     """
     Update coverage db with the coverage of each logRE
     """
     client = connect.Connect.get_connection()
-    db_ = client.get_database(project_name)
+    db_ = client.get_database(config.DB_NAME)
     # collection for coverage
     coverage = db_.coverage
     # collection for logRE
@@ -182,7 +188,10 @@ def update_coverage_db(project_name, db_port):
             must_coverage = list(set.intersection(*set_list))
             for location in must_coverage:
                 # update or insert the covered field to Must
-                coverage.update_one({'location': location}, {'$set': {'covered': 'Must'}}, upsert=True)
+                try:
+                    coverage.update_one({'location': location}, {'$set': {'covered': 'Must'}}, upsert=True)
+                except pymongo.errors.DuplicateKeyError:
+                    pass
                 
                 # update global statements of the module of that location
                 module_name = location.split('@')[0]
@@ -258,43 +267,3 @@ def insert_log_seq(seq, db):
 
     insert_doc(db.log_sequence, doc)
 
-
-if __name__ == "__main__":
-
-
-    client = connect.Connect.get_connection(27017)
-    # db = client.get_database('dum') 
-
-    # coll = db.dum
-
-    # coll.create_index([('location', pymongo.ASCENDING)], unique=True)
-
-    # for i in range(10):
-
-    #     try:
-
-    #         coll.insert_one({'location': '1', 'covered':'Must'})
-    #         coll.insert_one({'location': '1', 'covered':'May'})
-    #     except pymongo.errors.DuplicateKeyError:
-    #         pass
-
-    db = client.get_database('t')
-    insert_log_seq('t.com@3t.com@51t.com@14t.com@14t.com@3t.com@14', db)
-    
-    # coll = db_.get_collection('log_sequence')
-    # coll.insert_one({'log_sequence': 't.com@3t.com@51t.com@14t.com@14t.com@3t.com@14t.com@14t.com@14'})
-    # print(view_collections(db_))
-    # print_all_docs(db_.coverage, {})
-    # get_coverage(db_.coverage)
-
-    
-    # cursor = db_.logRE.find()
-    # for doc in cursor:
-    #     logRE = doc['logRE']
-    #     query = {"logRE" : {'$eq' : logRE}}
-    #     cursor_dup_logRE = db_.logRE.find(query)
-    #     for i in cursor_dup_logRE:
-    #         print(i)
-    # cursor.rewind()
-    # for doc in cursor:
-    #     print(1)
