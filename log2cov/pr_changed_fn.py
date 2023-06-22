@@ -1,5 +1,5 @@
 import requests
-import csv
+import db
 import ast
 import base64
 import difflib
@@ -104,6 +104,12 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
     lines_get_changed = set()
     functions_get_changed = set()
 
+    # load module coverage for workloads
+    col_module_coverage = db.Connect.get_connection().get_database('salt_workloads_module_coverage').get_collection("module_coverage")
+
+    is_valid_pr = False
+
+
     for file in comparison_data["files"]:
         if not file["filename"].startswith("salt/") or not file["filename"].endswith(".py"):
             continue
@@ -149,7 +155,33 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
       
         changed_file_names.add(file["filename"])
 
-    return changed_file_names, lines_get_changed, functions_get_changed
+        '''
+        Check if the PR is valid, valid means that the pr code change touch the workloads coverage
+        '''
+        # check if prev_file_name exists in col_module_coverage, if so replace it with file_name
+        
+        query_name = prev_file_name if prev_file_name else file_name
+
+        
+        existing_doc = col_module_coverage.find_one({"module_name": query_name})
+
+        if existing_doc:
+            # If a document with module_name exists in the collection,
+            # the PR is valid and we should update the module_name if necessary
+            is_valid_pr = True
+
+
+            if prev_file_name:
+
+                col_module_coverage.update_one(
+                    {"_id": existing_doc["_id"]},
+                    {"$set": {"module_name": file_name}}
+                )
+
+    
+   
+
+    return changed_file_names, lines_get_changed, functions_get_changed, is_valid_pr
 
 
 
