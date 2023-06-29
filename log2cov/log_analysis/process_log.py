@@ -1,7 +1,10 @@
 import re 
 import os
 
-
+MAPPING = {
+    'module': 'modules',
+    'returner': 'returners'
+}
 
 def get_regex_alternative_group(source_code_root):
     '''
@@ -22,7 +25,7 @@ def get_regex_alternative_group(source_code_root):
             name = i.split(".")[0]
             group += f"{name}|{name}\.|"
 
-    group = group[:-1]
+    group += "loaded"
     group += ")"
     return group
 
@@ -38,17 +41,25 @@ def get_log_sequence(log_file, project_name, alternative_group, thread_id_index)
         for line in f:
             capture = p.search(line)
             if capture:
-                result = capture.group(0)
-                # trim off the white space
-                result = result.rstrip().lstrip().replace('[','').replace(']','').replace(':','@')
+                log_location = capture.group(0)
+                log_location = log_location.rstrip().lstrip().replace('[','').replace(']','')
+
+                # resolve dynamic loading, if the log location contains 'loaded.int', we need to get the real log location
+                if 'loaded.int' in log_location:
+                    parts = log_location.split('.loaded.int.')
+                    module_parts = parts[1].split('.')
+                    if module_parts[0] in MAPPING:
+                        module_parts[0] = MAPPING[module_parts[0]]
+                    module = '.'.join(module_parts)
+                    log_location = f'{parts[0]}.{module}'
 
                 # get the thread id
                 thread_id = line.split(' ')[thread_id_index].replace('[','').replace(']','')
 
                 if thread_id not in log_seq_map:
-                    log_seq_map[thread_id] = result
+                    log_seq_map[thread_id] = log_location
                 else:
-                    log_seq_map[thread_id] += result
+                    log_seq_map[thread_id] += log_location
 
              
             
@@ -80,5 +91,8 @@ def dump_log_seq(log_file, project_root_dir, project_name, thread_id_index):
         log_sequence += value
 
 
-    with open(f"log_seq.txt", 'w+') as f:
+    # create dir if not exist
+    if not os.path.exists(f"log2cov-out/log_sequence/{project_name}"):
+        os.makedirs(f"log2cov-out/log_sequence/{project_name}")
+    with open(f"log2cov-out/log_sequence/{project_name}/log_seq.txt", 'w+') as f:
         f.write(log_sequence)
