@@ -5,7 +5,7 @@ import sys
 
 
 
-def get_call_graph(modules_root_dir, call_graph_path, project_name):
+def get_call_graph(modules_root_dir, call_graph_path, project_name, out_dir=None):
     """
     Processes the call graph json file and returns a path to processed call graph
     """
@@ -45,16 +45,18 @@ def get_call_graph(modules_root_dir, call_graph_path, project_name):
 
     json_object = json.dumps(new_dic, indent = 4) 
 
-
-    project_name = os.path.basename(os.path.normpath(modules_root_dir))
-
-    # if "../out" does not exist, create it
-    if not os.path.exists("log2cov-out/call_graph"):
-        os.makedirs("log2cov-out/call_graph")
-    out_path = f'log2cov-out/call_graph/{project_name}.json'
-    with open(out_path, "w+") as f: 
-        f.write(json_object) 
-    
+    if out_dir is None:
+        sub_path = os.path.basename(os.path.normpath(modules_root_dir))
+        if not os.path.exists("log2cov-out/call_graph"):
+            os.makedirs("log2cov-out/call_graph")
+        out_path = f'log2cov-out/call_graph/{sub_path}.json'
+        with open(out_path, "w+") as f: 
+            f.write(json_object) 
+    else:
+        with open(out_dir, "w+") as f: 
+            f.write(json_object) 
+        out_path = out_dir
+        
     return out_path
 
 
