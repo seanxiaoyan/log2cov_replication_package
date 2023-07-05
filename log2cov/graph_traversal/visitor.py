@@ -9,7 +9,7 @@ from config import LogConfig
 
 class newVisitor(ast.NodeVisitor):
     def __init__( self, filepath, size, size_hit_return, module_path=None,call_stack=None, visitor_type =1, 
-    path_visited = None, end_lineno = None, fn_def_lineno = set(), path_all = None): # visitor_type 2: condintional branch visitor, 1: other visitor
+    path_visited = None, end_lineno = None, fn_def_lineno = None, path_all = None): # visitor_type 2: condintional branch visitor, 1: other visitor
 
       self.conditional_branch_visitor_cycle_begin = False
       self.log = []
@@ -17,7 +17,7 @@ class newVisitor(ast.NodeVisitor):
       self.hit_return_log = []
 
       self.end_lineno = end_lineno
-      self.fn_def_lineno = fn_def_lineno
+      self.fn_def_lineno = fn_def_lineno if fn_def_lineno else set()
 
       self.size = size
       self.size_hit_return = size_hit_return

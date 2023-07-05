@@ -2,7 +2,7 @@ from json import JSONEncoder
 
 class logRe():
     def __init__(self, module=None,lineno=None,begin_cycle=False,end_cycle=False,begin_loop=False,\
-        end_loop=False,coverage=set(), may_coverage = set(), must_not_coverage = set() ,**entries):
+        end_loop=False,coverage=None, may_coverage=None, must_not_coverage=None ,**entries):
 
         self.module = module 
         self.lineno = lineno
@@ -10,9 +10,9 @@ class logRe():
         self.end_cycle = end_cycle
         self.begin_loop = begin_loop
         self.end_loop = end_loop
-        self.coverage = coverage
-        self.may_coverage = may_coverage
-        self.must_not_coverage = must_not_coverage
+        self.coverage = coverage if coverage is not None else set()
+        self.may_coverage = may_coverage if may_coverage is not None else set()
+        self.must_not_coverage = must_not_coverage if must_not_coverage is not None else set()
         # converting dict to obejct 
         self.__dict__.update(entries)
 
