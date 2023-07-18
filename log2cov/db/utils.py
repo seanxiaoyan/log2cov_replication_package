@@ -4,6 +4,7 @@ import db.connect as connect
 from pprint import pprint
 import pymongo
 import config
+import logging 
 
 def view_collections(db):
     print(db.list_collection_names())
@@ -141,12 +142,21 @@ def check_coverage_location(db, location):
         
 
 
-def update_coverage_db():
+def update_coverage_db(db_name=None):
     """
     Update coverage db with the coverage of each logRE
     """
+    logging.info("starting update coverage db")
     client = connect.Connect.get_connection()
-    db_ = client.get_database(config.DB_NAME)
+    if not db_name:
+        db_ = client.get_database(config.DB_NAME)
+    else:
+        db_ = client.get_database(db_name)
+
+    if not 'coverage' in db_.list_collection_names():
+        create_coll(db_, 'coverage')
+        create_index(db_.coverage, 'location')
+
     # collection for coverage
     coverage = db_.coverage
     # collection for logRE
@@ -156,6 +166,14 @@ def update_coverage_db():
 
     # set to memorize updated modules
     updated_modules = set()
+
+    module_coverage = set()
+    db_module_coverage = client.get_database('salt_workloads_module_coverage')
+    # if collection module_coverage does not exist, then create index for field: module_name, unique true
+    if not 'module_coverage' in db_module_coverage.list_collection_names():
+        create_coll(db_module_coverage, 'module_coverage')
+        create_index(db_module_coverage.module_coverage, 'module_name')
+
 
     # find all logRE in logRE collection
     cursor = matched_logRE.find()
@@ -170,7 +188,7 @@ def update_coverage_db():
             # find all duplicate of that logRE
             logRE_regex = ""
             for i in logRE:
-                if i == '(' or i == ')' or i == '+' or i == '|':
+                if i == '(' or i == ')' or i == '+' or i == "*" or i == '|':
                     logRE_regex += f'\{i}'
                 else:
                     logRE_regex += i
@@ -183,9 +201,9 @@ def update_coverage_db():
             for dup_logRE in cursor_dup_logRE:
                 set_list.append(set(dup_logRE['coverage']))
             if not set_list:
-                print(f"logRE: {logRE} | regex:  f'^(\(*{logRE_regex}\)*(\+)*)+$'")
+                print(f"cannot find dup logRE: {logRE} | regex:  f'^(\(*{logRE_regex}\)*(\+)*)+$'")
                 continue
-            must_coverage = list(set.intersection(*set_list))
+            must_coverage = set.union(*set_list)
             for location in must_coverage:
                 # update or insert the covered field to Must
                 try:
@@ -195,6 +213,8 @@ def update_coverage_db():
                 
                 # update global statements of the module of that location
                 module_name = location.split('@')[0]
+
+                module_name_unmodified = location.split('@')[0]
 
                 if module_name.endswith("__init__"):
                     module_name = ".".join(module_name.split(".")[:-1])
@@ -219,6 +239,8 @@ def update_coverage_db():
                     except pymongo.errors.DuplicateKeyError:
                         pass
                     updated_modules.add(module_name)
+
+                    module_coverage.add(module_name_unmodified)
             
 
 
@@ -259,6 +281,16 @@ def update_coverage_db():
             cursor_dup_logRE.rewind()
             for dup_logRE in cursor_dup_logRE:
                 processed_logREs.add(dup_logRE['logRE'])
+
+
+    for module_name in module_coverage:
+        doc = {'module_name': module_name}
+        try:
+            db_module_coverage.module_coverage.insert_one(doc)
+        except pymongo.errors.DuplicateKeyError:
+            pass
+ 
+    logging.info("finished update coverage db")
 
 def insert_log_seq(seq, db):
     doc = {

@@ -9,9 +9,10 @@ from datetime import datetime
 import db
 import pymongo
 import os
+import config 
 
 class MayResolver():
-    def __init__(self, project_name, db_name, project_root_dir, reversed_call_graph_location, call_graph_location):
+    def __init__(self, project_name, db_name):
         self.project_name = project_name
         self.db_name = db_name
 
@@ -21,9 +22,9 @@ class MayResolver():
         self.may_resolved = db.Connect.get_connection().get_database(self.db_name).get_collection("resolved_may")
         self.may_resolved.create_index([("location", pymongo.ASCENDING)], unique=True)
 
-        self.project_root_dir = project_root_dir
-        self.reversed_call_graph = reversed_call_graph_location
-        self.call_graph= call_graph_location
+        self.project_root_dir = config.PROJECT_ROOT_PATH
+        self.reversed_call_graph = config.REVERSED_CALL_GRAPH_LOCATION
+        self.call_graph= config.CALL_GRAPH_LOCATION
 
 
     def slicing_for_match(self):
@@ -35,12 +36,6 @@ class MayResolver():
 
         self.create_counted_coverage()
 
-        if not os.path.exists("log2cov-out/logs"):
-            os.makedirs("log2cov-out/logs")
-        log_location = datetime.now().strftime('log2cov-out/logs/slicing_%Y_%m_%d_%H_%M.log')
-        logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(levelname)s %(message)s')
-
-        
         # slicing modules
         total_if_coverage = 0
         with concurrent.futures.ProcessPoolExecutor() as executor:
@@ -72,8 +67,30 @@ class MayResolver():
         self.fn_counted.drop()
 
 
+    def update_coverage(self):
+        """
+        Update coverage collection using resolved_may collection
+        """
+        db_ = db.Connect.get_connection().get_database(self.db_name)
 
+        resolved_may = db_['resolved_may']
+        coverage = db_['coverage']
 
+        for doc in resolved_may.find():
+            # Use the location field as the query to find the corresponding doc in the coverage collection
+            coverage_doc = coverage.find_one({"location": doc["location"]})
+            # If a document was found
+            if coverage_doc is not None:
+                # Update the 'covered' field of the coverage collection document
+                # catch duplicatekeyerror
+                try:
+                    coverage.update_one({"_id": coverage_doc["_id"]}, {"$set": {"covered": doc["covered"]}})
+                except pymongo.errors.DuplicateKeyError:
+                    print(f"DuplicateKeyError for {doc['location']}")
 
- 
+        
+
+        # Drop the resolved_may collection
+        resolved_may.drop()
+
 

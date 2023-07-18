@@ -10,14 +10,14 @@ import sys
 import pr_changed_fn
 import update_cg
 import config
-
+import time
 
 
 
 
 REPO_OWNER = "saltstack"
 REPO_NAME = "salt"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 CSV_FILE = "filtered_prs.csv"
 headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 OUTPUT_FILE = "num_changed_files.png"
@@ -32,21 +32,18 @@ if __name__ == "__main__":
 
     '''workload'''
     project_name = 'salt'
-    call_graph_location = '/data/salt_3005.json'
     log_file = os.path.join("/data/logs", pr_number, f"{workload_name}.log")
 
     if not os.path.exists(log_file):
         print(f"log file {log_file} does not exist")
         exit()
-    if not os.path.exists(call_graph_location):
-        print(f"call graph {call_graph_location} does not exist")
-        exit()
+
 
     thread_id_index = 4 
     project_root_dir = '/projects/salt'
     modules_dir = os.path.join(project_root_dir, project_name)
 
-
+    original_cg_path = '/log2cov/log2cov-out/call_graph/salt.json'
 
     # ---------------------------------------------------------------------------------------------------------------------------
 
@@ -59,24 +56,25 @@ if __name__ == "__main__":
     if not changed_files:
         exit()
     
-    # 2. update the call graph using the modified files
-    cg_subset_path = '/tmp/salt.json'
+    if workload_name == 'salt':
+        # 2. update the call graph using the modified files
+        cg_subset_path = '/tmp/salt.json'
 
-    # make sure the cg_subset does not exist, otherwise remove it 
-    if os.path.exists(cg_subset_path):
-        os.remove(cg_subset_path)
-    
-    changed_modules = [f for f in changed_files if os.path.exists(os.path.join(project_root_dir, f))]
-    update_cg.run_pycg('salt', changed_modules, cg_subset_path)
+        # make sure the cg_subset does not exist, otherwise remove it 
+        if os.path.exists(cg_subset_path):
+            os.remove(cg_subset_path)
+        
+        changed_modules = [f for f in changed_files if os.path.exists(os.path.join(project_root_dir, f))]
+        update_cg.run_pycg('salt', changed_modules, cg_subset_path)
 
-    # Process the sub call graph 
-    print("process sub call graph")
-    modules_dir = os.path.join(project_root_dir, 'salt')
-    utils.get_call_graph(modules_dir, cg_subset_path, 'salt', out_dir=cg_subset_path)
+        # Process the sub call graph 
+        print("process sub call graph")
+        modules_dir = os.path.join(project_root_dir, 'salt')
+        utils.get_call_graph(modules_dir, cg_subset_path, 'salt', out_dir=cg_subset_path)
 
-    # update the original call graph
-    original_cg_path = '/log2cov/log2cov-out/call_graph/salt.json'
-    update_cg.update_call_graph(original_cg_path, cg_subset_path, changed_modules, file_name_map)
+        # update the original call graph
+        
+        update_cg.update_call_graph(original_cg_path, cg_subset_path, changed_modules, file_name_map)
 
     # 3. clean up collection in coverage db
     print("clean up coverage collection in  db")
@@ -118,10 +116,11 @@ if __name__ == "__main__":
 
     # 7. update coverage db
     print(f"*** update coverage db for workload {workload_name}***")
+    db.Connect.get_connection().get_database(config.DB_NAME).drop_collection("coverage")
+    time.sleep(1) 
     db_coverage = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("coverage")
     # create Coumpund Index for  coverage database
     db_coverage.create_index([("location", pymongo.ASCENDING),("covered",pymongo.ASCENDING )], unique=True)
     db.update_coverage_db()
-
 
 

@@ -15,6 +15,12 @@ def program_analysis_AST(project_name, project_root_dir, call_graph_location, mo
     
     p = os.path.join(project_root_dir, project_name)
     if mods is None:
+        # create out directory
+        try:
+            os.makedirs("log2cov-out/AST")
+        except FileExistsError:
+            pass
+
         modules = utils.get_file_path_all(p, 'py')
         # coverage database
         db_coverage = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("coverage")
@@ -37,20 +43,11 @@ def program_analysis_AST(project_name, project_root_dir, call_graph_location, mo
         print("call graph not exist")
         exit()
 
-    # create out directory
-    try:
-        os.makedirs("log2cov-out/AST")
-    except FileExistsError:
-        pass
 
     # build AST
     with concurrent.futures.ProcessPoolExecutor() as executor:
-        
-        for r in executor.map(utils.process_file, modules, repeat(call_graph_location), repeat(project_root_dir), repeat(project_name)):
-            try:
-                print(r)
-            except Exception as e:
-                print(e)
+        for _ in executor.map(utils.process_file, modules, repeat(call_graph_location), repeat(project_root_dir), repeat(project_name)):
+            pass
 
 
 def patching_indentification(test_dir, project_name, call_graph_location):

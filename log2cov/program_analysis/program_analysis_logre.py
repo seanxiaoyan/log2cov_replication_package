@@ -63,9 +63,10 @@ def program_analysis_logRE(project_name, entry = None):
 
     # if log2cov-out/logs does not exist, create it
     if not os.path.exists("log2cov-out/logs"):
-        os.makedirs("log2cov-out/logs")
-    log_location = datetime.now().strftime('log2cov-out/logs/salt_%Y_%m_%d_%H_%M.log')
-    logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(levelname)s %(message)s')
+        os.makedirs("log2cov-out/logs")      
+    # log_location = datetime.now().strftime('log2cov-out/logs/salt_%Y_%m_%d_%H_%M.log')
+    log_location = datetime.now().strftime('log2cov-out/logs/update_coverage_db.log')
+    logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(asctime)s %(created)f %(levelname)s %(message)s')
 
     # get ast files
     if entry is None:
@@ -110,4 +111,5 @@ def program_analysis_logRE(project_name, entry = None):
 
     print("All:",len(entries))
     print("Done:",len(results))
+    logging.info(f"Done: {len(results)}")
 

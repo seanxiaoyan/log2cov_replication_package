@@ -101,11 +101,6 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
 
     
     for l in seq:
-        if l.may_coverage:
-          may_coverage.update(l.may_coverage)
-        if l.must_not_coverage:
-          must_not_coverage.update(l.must_not_coverage)
-
         logRE_component = ""
         if l.begin_cycle and not cycle_begin:
             logRE_component += "("
@@ -123,7 +118,7 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
             if logRE_component[-1] == "(":
               logRE_component = logRE_component[:-1]
             else:
-              logRE_component +=")+"
+              logRE_component +=")*"
           # check if logRE end with (
           elif logRE:
             if logRE[-1] == "(":
@@ -150,10 +145,11 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
     if not logRE:
       continue
     
+    logRE = check_standalone(logRE)
     # valid logRE
     if not validate_logRE(logRE):
       continue
-
+    
 
     # match logRE
     # logRE = logRE.replace("+", "{2,}")
@@ -166,6 +162,12 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
 
     # update Must Coverage
     for l in seq:
+      if l.may_coverage:
+          may_coverage.update(l.may_coverage)
+
+      if l.must_not_coverage:
+        must_not_coverage.update(l.must_not_coverage)
+
       if l.coverage:
         for path in l.coverage:
             if path not in code_path:
@@ -275,6 +277,8 @@ def _print_seq(log, cycle, filepath, path_outside_condition_branch=[]):
           loop_begin=False
         logRE += logRE_component
 
+    logRE = check_standalone(logRE)
+
     if not validate_logRE(logRE):
       continue
     if not logRE:
@@ -300,14 +304,23 @@ def _print_seq(log, cycle, filepath, path_outside_condition_branch=[]):
     print(f'must_not: {l_must_not}')
     print(f'may: {l_may}')
 
+def check_standalone(logRE):
+  standalone_pattern =  r"^\(\w[.\w]*@(\d+|\(\d+(\|\d+)*\))\)\*$"
 
+  if re.match(standalone_pattern, logRE):
+      return logRE.replace('*', '+')
+
+  return logRE
 
 def validate_logRE(logRE):
   '''
   Validate if the given logRE is a valid regular expression pattern
   '''
+ 
   try:
     re.compile(logRE)
+    if re.search(r"\*\Z", logRE) is not None:
+      return False
     return True
   except re.error:
     return False

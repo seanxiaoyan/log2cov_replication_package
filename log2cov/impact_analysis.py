@@ -10,11 +10,11 @@ import sys
 import pr_changed_fn
 import update_cg
 import config
-
+import csv 
 
 REPO_OWNER = "saltstack"
 REPO_NAME = "salt"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 CSV_FILE = "filtered_prs.csv"
 headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 OUTPUT_FILE = "num_changed_files.png"
@@ -27,12 +27,25 @@ if __name__ == "__main__":
     #      Impact Analysis
 
     print("get modified files in a PR")
-    changed_files, lines_changed, changed_fn = pr_changed_fn.get_changed_functions_in_pr(REPO_OWNER, REPO_NAME, pr_number, headers)
+    changed_files, file_name_map, lines_changed, pr_valid, fn_changed = pr_changed_fn.get_changed_functions_in_pr(REPO_OWNER, REPO_NAME, pr_number, headers)
+
+    # append pr_number,pr_valid to a file
+    CSV_FILE = "/data/impact_analysis.csv"
+    csv_header = ["pr_number", "pr_valid"]
+    with open(CSV_FILE, "a", newline='') as outfile:
+        writer = csv.writer(outfile)
+
+        # Write the header if the file doesn't exist
+        if not os.path.isfile(CSV_FILE):
+            writer.writerow(csv_header)
+
+        writer.writerow([pr_number, pr_valid])
+
 
 
     # *** query the code changes in DB to see whether the change touches the code that the workloads cover
 
-    db_workload_list = ["salt_docker", "salt_maven", "salt_nginx", "salt_postgres"]
+    db_workload_list = ["salt_docker", "salt_salt", "salt_nginx", "salt_users", "salt_openssh"]
     
     # Flag to track if the change impacts coverage
     total_lines = 0

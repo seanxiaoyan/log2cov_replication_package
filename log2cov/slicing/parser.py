@@ -1,6 +1,6 @@
 from parse import *
 import re
-from config import LogConfig
+import config
 
 def get_var_from_log(log_constant, log_location, var_index):
     var_values = set()
@@ -30,7 +30,7 @@ def get_var_from_log(log_constant, log_location, var_index):
 def find_log_msg(log_location):
     res_log_msg = set()
 
-    log_file_path = LogConfig.config("log_file_path")
+    log_file_path = config.LOG_FILE_PATH
     with open(log_file_path, 'r') as f:
         for lineno, line in enumerate(f):
             if log_location in line:

@@ -10,9 +10,10 @@ import graph_traversal
 from collections import OrderedDict
 import utils
 import json 
-from config import LogConfig
 import slicing.parser as parser
 import itertools 
+import config 
+
 """
 slicing module gast and finding the match between conditional stmt logging stmt
 matching: variables in conditional stmt appears in logging stmt
@@ -212,7 +213,7 @@ class slicer(gast.NodeVisitor):
                         if isinstance(second_level_user.node, gast.Call) and \
                             isinstance(second_level_user.node.func, gast.Attribute) and \
                             isinstance(second_level_user.node.func.value, gast.Name) and \
-                            second_level_user.node.func.value.id in LogConfig.config("pattern"):
+                            second_level_user.node.func.value.id in config.LogConfig.config("pattern"):
                             # check if the log stmt is under try caluse or if stmt using ancestor
                             parents = self.ancestors.parents(second_level_user.node)
                             for parent in parents:
@@ -226,7 +227,7 @@ class slicer(gast.NodeVisitor):
                             if isinstance(third_level_user.node, gast.Call) and \
                             isinstance(third_level_user.node.func, gast.Attribute) and \
                             isinstance(third_level_user.node.func.value, gast.Name) and \
-                            third_level_user.node.func.value.id in LogConfig.config("pattern"):
+                            third_level_user.node.func.value.id in config.LogConfig.config("pattern"):
                                 # check if the log stmt is under try caluse or if stmt using ancestor
                                 parents = self.ancestors.parents(third_level_user.node)
                                 for parent in parents:
@@ -724,7 +725,7 @@ class slicer(gast.NodeVisitor):
 
 
 def process_file(source_filename, project_name, db_name, project_root_dir, reversed_call_graph_path, call_graph_path):
-    db_ = db.Connect.get_connection().get_database(db_name + '_docker')
+    db_ = db.Connect.get_connection().get_database(config.DB_NAME)
     with open(source_filename) as f:
         code = f.read()
     try:

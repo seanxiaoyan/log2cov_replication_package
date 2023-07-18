@@ -1,3 +1,5 @@
+from _ast import ClassDef
+from typing import Any
 import requests
 import db
 import ast
@@ -9,9 +11,17 @@ import os
 class FunctionVisitor(ast.NodeVisitor):
     def __init__(self):
         self.functions = set()
+        self.class_name = None
+    def visit_ClassDef(self, node):
+        self.class_name = node.name
+        self.generic_visit(node)
 
     def visit_FunctionDef(self, node):
-        self.functions.add(node.name)
+        if self.class_name:
+            name = self.class_name + "." + node.name
+        else:
+            name = node.name
+        self.functions.add(name)
         self.generic_visit(node)
 
     def visit_AsyncFunctionDef(self, node):
@@ -22,6 +32,8 @@ def get_functions_from_code(code, prefix):
     tree = ast.parse(code)
     visitor = FunctionVisitor()
     visitor.visit(tree)
+    if ".__init__" in prefix:
+        prefix = prefix.replace(".__init__", "")
     return {f"{prefix}.{function}" for function in visitor.functions}
 
 def get_modified_lines(diff):
@@ -58,6 +70,9 @@ def get_modified_lines(diff):
 
 
 def get_changed_functions(base_code, modified_lines, prefix, prev_name=None):
+    """
+    example out {'salt.roster.flat.targets', 'salt.roster.dir._render', 'salt.renderers.yaml.render', 'salt.roster.__init__.targets'}
+    """
     modified_functions = set()
     if prev_name:
         pass
@@ -80,14 +95,7 @@ def get_changed_functions(base_code, modified_lines, prefix, prev_name=None):
     return modified_functions
 
 def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
-    """
-    Mine the changed functions in a PR.
-    Return a tuple of 5 sets: 
-    added functions, 
-    deleted functions, 
-    modified functions, 
-    changed file names (in dot format)
-    """
+
     url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/pulls/{pr_number}"
     response = requests.get(url, headers=headers)
     pr_data = response.json()
@@ -108,6 +116,7 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
     col_module_coverage = db.Connect.get_connection().get_database('salt_workloads_module_coverage').get_collection("module_coverage")
 
     is_valid_pr = False
+    file_name_map = dict()
 
 
     for file in comparison_data["files"]:
@@ -115,7 +124,7 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
             continue
 
 
-        file_name = file["filename"].replace("/", ".").rstrip(".py")
+        file_name = os.path.splitext(file["filename"])[0].replace("/", ".")
         prev_file_name = None
 
         # Get base and changed file contents
@@ -132,7 +141,7 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
                 url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/{file['filename']}?ref={base_sha}"
             elif file["status"] == "renamed":
                 url = f"https://api.github.com/repos/{repo_owner}/{repo_name}/contents/{file['previous_filename']}?ref={base_sha}"
-                prev_file_name = file['previous_filename'].replace("/", ".").rstrip(".py")
+                prev_file_name = os.path.splitext(file["previous_filename"])[0].replace("/", ".")
 
             if file["status"] != "added":
                 response = requests.get(url, headers=headers)
@@ -153,7 +162,6 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
         res_changed_fn = get_changed_functions(base_code, res_lines_number, file_name, prev_file_name)
         functions_get_changed.update(res_changed_fn)
       
-        changed_file_names.add(file["filename"])
 
         '''
         Check if the PR is valid, valid means that the pr code change touch the workloads coverage
@@ -162,7 +170,10 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
         
         query_name = prev_file_name if prev_file_name else file_name
 
-        
+        # if .__init__ in query_name, remove it
+        if '.__init__' in query_name:
+            query_name = query_name.replace('.__init__', '')
+
         existing_doc = col_module_coverage.find_one({"module_name": query_name})
 
         if existing_doc:
@@ -171,17 +182,11 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
             is_valid_pr = True
 
 
-            if prev_file_name:
-
-                col_module_coverage.update_one(
-                    {"_id": existing_doc["_id"]},
-                    {"$set": {"module_name": file_name}}
-                )
-
-    
-   
-
-    return changed_file_names, lines_get_changed, functions_get_changed, is_valid_pr
+        if prev_file_name:
+            file_name_map[file_name] = prev_file_name
+      
+        changed_file_names.add(file["filename"])
+    return changed_file_names, file_name_map, lines_get_changed, is_valid_pr, functions_get_changed
 
 
 
@@ -213,6 +218,10 @@ def get_lines_changed(base_code, changed_code, file_name, prev_file_name=None):
     prev_line_base = None
     next_line_base = None
     base_file_name = prev_file_name if prev_file_name else file_name
+
+    # if .__init__ in base_file_name, remove it
+    if '.__init__' in base_file_name:
+        base_file_name = base_file_name.replace('.__init__', '')
 
     for i, line in enumerate(diff):
         if line.startswith("@@"):

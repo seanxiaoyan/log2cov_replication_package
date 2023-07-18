@@ -81,7 +81,6 @@ def insert_lineno_method(coll, docs):
 
 
 def process_file(source_filepath, json_filename, project_root_dir, project_name):
-    # print("**********  processing {} **********".format(source_filename))
 
     tree = parse_ast(source_filepath) # an ast tree for the source file
     if not tree:
@@ -114,7 +113,6 @@ def process_file(source_filepath, json_filename, project_root_dir, project_name)
         # use relative path also for the AST
         construct_ast(method, module_name, project_name)
 
-    return "**********  Done {} **********".format(source_filepath)
     
     
 

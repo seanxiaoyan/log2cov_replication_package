@@ -52,6 +52,14 @@ def get_log_sequence(log_file, project_name, alternative_group, thread_id_index)
                         module_parts[0] = MAPPING[module_parts[0]]
                     module = '.'.join(module_parts)
                     log_location = f'{parts[0]}.{module}'
+                elif 'loader.127.0.0.1.int' in log_location:
+                    parts = log_location.split('.int.')
+                    module_parts = parts[1].split('.')
+                    if module_parts[0] in MAPPING:
+                        module_parts[0] = MAPPING[module_parts[0]]
+                    module = '.'.join(module_parts)
+                    log_location = f'salt.{module}'
+
 
                 # get the thread id
                 thread_id = line.split(' ')[thread_id_index].replace('[','').replace(']','')
