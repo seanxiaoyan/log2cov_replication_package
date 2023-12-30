@@ -17,10 +17,23 @@ import time
 
 REPO_OWNER = "saltstack"
 REPO_NAME = "salt"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 CSV_FILE = "filtered_prs.csv"
 headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 OUTPUT_FILE = "num_changed_files.png"
+
+def set_changed_files(pr_number, changed_files, project_root_dir):
+    # changed_files: list of file paths
+
+    # append project root dir to each file path
+    changed_files = [os.path.join(project_root_dir, f) for f in changed_files]
+    
+    db_changed_files = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("changed_files")
+    db_changed_files.create_index([("pr_number", pymongo.ASCENDING)], unique=True)
+    # replace the existing doc with the new one
+    db_changed_files.replace_one({"pr_number": pr_number}, {"pr_number": pr_number, "file_list": changed_files}, upsert=True)
+
+
 
 if __name__ == "__main__":
     pr_number = sys.argv[1]
@@ -55,8 +68,10 @@ if __name__ == "__main__":
     # if changed_files is empty, exit
     if not changed_files:
         exit()
-    
-    if workload_name == 'salt':
+    # add changed_files to config so that it can be used in other modules
+    set_changed_files(pr_number, list(changed_files), project_root_dir)
+
+    if workload_name == 'salt': # for each codebase version, we only need to process the call graph once, that is, up on the first workload
         # 2. update the call graph using the modified files
         cg_subset_path = '/tmp/salt.json'
 

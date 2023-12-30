@@ -726,6 +726,9 @@ class slicer(gast.NodeVisitor):
 
 def process_file(source_filename, project_name, db_name, project_root_dir, reversed_call_graph_path, call_graph_path):
     db_ = db.Connect.get_connection().get_database(config.DB_NAME)
+    if not os.path.exists(source_filename):
+        print(f"slicer_assignment_eval@730 file not exist: {source_filename}")
+        return 0
     with open(source_filename) as f:
         code = f.read()
     try:

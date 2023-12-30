@@ -1,5 +1,36 @@
 import db
 from itertools import combinations
+from pprint import pprint
+
+def check_agreement_single():
+    # Connect to the MongoDB server, assuming it is running on your local machine (localhost) on port 27017
+    client = db.Connect.get_connection()
+
+    # Specify the names of your databases and collection
+    source_db_name = 'salt_pr_impact'
+    collection_name = 'impact'
+    source_db = client[source_db_name]
+    source_collection = source_db[collection_name]
+
+    valid_prs = set()
+    # dict
+    overall_workloads = {'gpg': 0, 'file': 0, 'aptpkg': 0, 'users': 0, 
+                         'openssh': 0, 'mongod': 0, 'cassandra': 0, 'salt': 0, 
+                         'nginx': 0, 'docker': 0}
+    for doc in source_collection.find():
+        if doc:
+            if doc["lines"]:
+                impacted_workloads = set()
+                for l,w in doc["lines"].items():
+                    dedup = set(w)
+                    for workload_name in w:
+                        impacted_workloads.add(workload_name)
+                if impacted_workloads:
+                    print(doc["PR_Number"], impacted_workloads)
+                for workload_name in impacted_workloads:
+                    overall_workloads[workload_name.split('_')[1]] += 1
+
+    print(overall_workloads)
 
 
 def check_agreement():
@@ -9,29 +40,19 @@ def check_agreement():
     # Specify the names of your databases and collection
     source_db_name = 'salt_pr_impact'
     collection_name = 'impact'
-
-    # Counter for disagreements
-    disagreement_counter = 0
-
-    # Iterate over the documents in the salt_docker.impact collection
     source_db = client[source_db_name]
     source_collection = source_db[collection_name]
 
-    # cursor = source_collection.find({"PR_Number": "62809"})
-    # for i in cursor:
-    #     print(i)
+    valid_prs = set()
     for doc in source_collection.find():
         if doc:
-            pr_number = doc['PR_Number'] 
-            total_lines = doc['total_lines']
-            lines_impact_different = doc['lines_impact_different']
+            if doc["lines"]:
+                for l,w in doc["lines"].items():
+                    if len(w) > 0 :
+                        valid_prs.add(doc["PR_Number"])
+                        break
 
-            if lines_impact_different > 0:
-              
-                disagreement_counter += 1
-    print(f"Total number of PRs with disagreement: {disagreement_counter}")
-
-
+    print(len(valid_prs))
 
 def compare_coverage_db():
     client = db.Connect.get_connection()
@@ -83,10 +104,10 @@ def compare_coverage_db_pairwise():
 
 def check_db():
     client = db.Connect.get_connection()
-    salt_docker = client['salt_docker']
+    salt_docker = client['salt_file']
     
     # check if there exist any document which the location field match the pattern of "*cmdmod*"
-    cursor = salt_docker['logRE'].find({"logRE": {"$regex": ".*cmdmod.*"}})
+    cursor = salt_docker['coverage'].find({"location": {"$regex": ".*states.file.*"}})
     for doc in cursor:
         print(doc)
     
@@ -94,7 +115,7 @@ def check_db():
 
 
 if __name__ == "__main__":
-    check_agreement()
+    check_agreement_single()
 
     
 

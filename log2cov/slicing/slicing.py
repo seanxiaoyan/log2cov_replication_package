@@ -31,8 +31,18 @@ class MayResolver():
         """
         In a given path, slicing the module ast and finding the match between conditional stmt logging stmt
         """
-        
-        modules = utils.get_module_names.get_file_path_all(self.project_root_dir, 'py')
+        if config.TASK_NAME == 'update_coverage_db':
+            # load changed files from db
+            coll = db.Connect.get_connection().get_database(self.db_name).get_collection('changed_files')
+            doc = coll.find_one({'pr_number': config.PR_NUMBER})
+
+            if doc is not None:
+                modules = doc['file_list']
+            else:
+                print(f"no changed files for {self.db_name}")
+                exit()
+        else:
+            modules = utils.get_module_names.get_file_path_all(self.project_root_dir, 'py')
 
         self.create_counted_coverage()
 

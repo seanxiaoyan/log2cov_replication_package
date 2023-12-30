@@ -70,7 +70,7 @@ def mark_cycle_end(log):
       
 
 
-def get_logRe_docs(visitor, log_seq):
+def get_logRe_docs(visitor, log_seq=None):
 
     docs_log = _get_logRe_docs(visitor.log, visitor.cycle, visitor.filepath, log_seq)
     docs_hit_log = _get_logRe_docs(visitor.hit_return_log, visitor.cycle, visitor.filepath, log_seq)
@@ -81,6 +81,7 @@ def get_logRe_docs(visitor, log_seq):
 def _get_logRe_docs(log, cycle, filepath, log_seq):
 
   docs = []
+  dic = {}
 
   for seq in log:
     if seq:
@@ -93,9 +94,7 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
     may_coverage = set()
     must_not_coverage = set()
 
-    # for path in node_visitor.path_visited:
-    #     if path not in code_path:
-    #         code_path.add(path)
+
     cycle_begin = False
     loop_begin = False
 
@@ -150,16 +149,13 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
     if not validate_logRE(logRE):
       continue
     
-
-    # match logRE
-    # logRE = logRE.replace("+", "{2,}")
-    pattern = re.compile(logRE+'\D') # add '\D' to avoid match file@3 with file@31
-    _match = re.search(pattern, log_seq)
-    if not _match:
-      continue
+    if log_seq:
+      # match logRE
+      pattern = re.compile(logRE+'\D') # add '\D' to avoid match file@3 with file@31
+      _match = re.search(pattern, log_seq)
+      if not _match:
+        continue
     
-    # for matched logRE, get the corresponding coverage information
-
     # update Must Coverage
     for l in seq:
       if l.may_coverage:
@@ -171,29 +167,38 @@ def _get_logRe_docs(log, cycle, filepath, log_seq):
       if l.coverage:
         for path in l.coverage:
             if path not in code_path:
-              # update coverage db
-              # result = coll_coverage.update_one({'location': path}, {'$set': {'covered': 'Must'}})
-              # msg = f"logRE matched, update db, matched count:{result.matched_count}, update count:{result.modified_count}"
-              # logging.warning(msg)
               code_path.add(path)
     
-    logging.info(f"{logRE} [{filepath}] {code_path}")
-    non_covered = list(must_not_coverage-code_path)
+    # logging.info(f"{logRE} [{filepath}] {code_path}")
+    non_covered = must_not_coverage-code_path
     doc = {
       'logRE': logRE,
-      'coverage': list(code_path),
-      'may_coverage': list(may_coverage),
+      'coverage': code_path,
+      'may_coverage': may_coverage,
       'must_not_coverage': non_covered,
       'entry': filepath
     }
-   
-    docs.append(doc)
-    # # update Must Not Coverage
-    # non_covered = list(set(must_not_coverage)-set(code_path))
-    # for path in non_covered:
-    #   result = coll_coverage.update_one({'location': path}, {'$set': {'covered': 'Must_Not'}})
-    #   msg = f"logRE matched, update db, matched count:{result.matched_count}, update count:{result.modified_count}"
-    #   logging.warning(msg)
+    
+    # If logRE already exists in the entry_dict, update fields as necessary
+    if logRE in dic:
+      dic[logRE]['coverage'] = dic[logRE]['coverage'].union(code_path)
+      dic[logRE]['may_coverage'] = dic[logRE]['may_coverage'].union(may_coverage)
+      dic[logRE]['must_not_coverage'] = dic[logRE]['must_not_coverage'].union(non_covered)
+    else:
+      # logRE does not exist in entry_dict, so just add it
+      dic[logRE] = doc
+
+  
+  for k, v in dic.items():
+    new_doc = {
+      'logRE': v['logRE'],
+      'coverage': list(v['coverage']),
+      'may_coverage': list(v['may_coverage']),
+      'must_not_coverage': list(v['must_not_coverage']),
+      'entry': v['entry']
+    }
+    docs.append(new_doc)
+
   return docs
   
 def print_seq(node_visitor):

@@ -14,7 +14,7 @@ import csv
 
 REPO_OWNER = "saltstack"
 REPO_NAME = "salt"
-GITHUB_TOKEN = "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"
+GITHUB_TOKEN = "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"
 CSV_FILE = "filtered_prs.csv"
 headers = {"Authorization": f"token {GITHUB_TOKEN}"}
 OUTPUT_FILE = "num_changed_files.png"
@@ -29,24 +29,11 @@ if __name__ == "__main__":
     print("get modified files in a PR")
     changed_files, file_name_map, lines_changed, pr_valid, fn_changed = pr_changed_fn.get_changed_functions_in_pr(REPO_OWNER, REPO_NAME, pr_number, headers)
 
-    # append pr_number,pr_valid to a file
-    CSV_FILE = "/data/impact_analysis.csv"
-    csv_header = ["pr_number", "pr_valid"]
-    with open(CSV_FILE, "a", newline='') as outfile:
-        writer = csv.writer(outfile)
-
-        # Write the header if the file doesn't exist
-        if not os.path.isfile(CSV_FILE):
-            writer.writerow(csv_header)
-
-        writer.writerow([pr_number, pr_valid])
-
-
 
     # *** query the code changes in DB to see whether the change touches the code that the workloads cover
 
-    db_workload_list = ["salt_docker", "salt_salt", "salt_nginx", "salt_users", "salt_openssh"]
-    
+    db_workload_list = ["salt_gpg", "salt_file", "salt_aptpkg"]
+
     # Flag to track if the change impacts coverage
     total_lines = 0
     lines_impact_different = 0 
@@ -54,37 +41,77 @@ if __name__ == "__main__":
     if "impact" not in db_impact.list_collection_names():
         coll_impact = db_impact.get_collection("impact")
         coll_impact.create_index([("PR_Number", pymongo.ASCENDING)], unique=True)
+    else:
+        coll_impact = db_impact.get_collection("impact")
 
+    # Check if a document with the given PR_Number exists
+    existing_doc = coll_impact.find_one({"PR_Number": pr_number})
 
-    doc_to_insert = {"PR_Number" : pr_number}
+    # If the document exists, use it as the base. Otherwise, create a new one with initialized 'lines'.
+    doc_to_update = existing_doc if existing_doc else {"PR_Number": pr_number, "lines": {}}
+
+    print("doc to update before : ", doc_to_update)
 
     # Iterate over changed lines
     for line in lines_changed:
-        total_lines += 1
-
-        num_workload_hit = 0 
         for db_name in db_workload_list:
             db_workload = db.Connect.get_connection().get_database(db_name)
-        
+            
             # Query the coverage collection
             result = db_workload.coverage.find_one({"location": line, "covered": "Must"})
-    
-            if result:
-                if line not in doc_to_insert:
-                    doc_to_insert[line] = [db_name]
-                else:
-                    doc_to_insert[line].append(db_name)
-                                
-                num_workload_hit += 1
-        
-        if num_workload_hit < len(db_workload_list) and num_workload_hit != 0:
-            lines_impact_different += 1
 
-    # Insert document into the impact collection
-    # catch duplicatekeyerror
-    try:
-        doc_to_insert["total_lines"] = total_lines
-        doc_to_insert["lines_impact_different"] = lines_impact_different
-        db_impact.impact.insert_one(doc_to_insert)
-    except pymongo.errors.DuplicateKeyError:
-        pass
+            if result:
+                if line not in doc_to_update['lines']:
+                    doc_to_update['lines'][line] = [db_name]
+                else:
+                    doc_to_update['lines'][line].append(db_name)
+                                    
+
+    # Update or insert the document based on its existence
+    if existing_doc:
+        # Only update the 'lines' field
+        coll_impact.update_one({"PR_Number": pr_number}, {"$set": {"lines": doc_to_update['lines']}})
+    else:
+        coll_impact.insert_one(doc_to_update)
+    
+    # # Flag to track if the change impacts coverage
+    # total_lines = 0
+    # lines_impact_different = 0 
+    # db_impact = db.Connect.get_connection().get_database("salt_pr_impact")
+    # if "impact" not in db_impact.list_collection_names():
+    #     coll_impact = db_impact.get_collection("impact")
+    #     coll_impact.create_index([("PR_Number", pymongo.ASCENDING)], unique=True)
+
+
+    # doc_to_insert = {"PR_Number" : pr_number}
+
+    # # Iterate over changed lines
+    # for line in lines_changed:
+    #     total_lines += 1
+
+    #     num_workload_hit = 0 
+    #     for db_name in db_workload_list:
+    #         db_workload = db.Connect.get_connection().get_database(db_name)
+        
+    #         # Query the coverage collection
+    #         result = db_workload.coverage.find_one({"location": line, "covered": "Must"})
+    
+    #         if result:
+    #             if line not in doc_to_insert:
+    #                 doc_to_insert[line] = [db_name]
+    #             else:
+    #                 doc_to_insert[line].append(db_name)
+                                
+    #             num_workload_hit += 1
+        
+    #     if num_workload_hit < len(db_workload_list) and num_workload_hit != 0:
+    #         lines_impact_different += 1
+
+    # # Insert document into the impact collection
+    # # catch duplicatekeyerror
+    # try:
+    #     doc_to_insert["total_lines"] = total_lines
+    #     doc_to_insert["lines_impact_different"] = lines_impact_different
+    #     db_impact.impact.insert_one(doc_to_insert)
+    # except pymongo.errors.DuplicateKeyError:
+    #     pass

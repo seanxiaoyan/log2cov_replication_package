@@ -104,3 +104,5 @@ def dump_log_seq(log_file, project_root_dir, project_name, thread_id_index):
         os.makedirs(f"log2cov-out/log_sequence/{project_name}")
     with open(f"log2cov-out/log_sequence/{project_name}/log_seq.txt", 'w+') as f:
         f.write(log_sequence)
+        
+    return log_sequence

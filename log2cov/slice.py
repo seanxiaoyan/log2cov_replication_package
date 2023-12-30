@@ -86,6 +86,8 @@ if __name__ == "__main__":
     config.set_call_graph_location(call_graph_location)
     config.set_reversed_call_graph_location(reversed_call_graph_location)
     config.set_log_file_path(log_path)
+    config.set_task('update_coverage_db')
+    config.set_pr_number(pr_number)
 
     log_location = datetime.now().strftime('log2cov-out/logs/update_coverage_db.log')
     logging.basicConfig(filename=log_location, level=logging.DEBUG, format='%(asctime)s %(created)f %(levelname)s %(message)s')

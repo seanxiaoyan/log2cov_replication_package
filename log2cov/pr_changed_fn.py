@@ -15,6 +15,7 @@ class FunctionVisitor(ast.NodeVisitor):
     def visit_ClassDef(self, node):
         self.class_name = node.name
         self.generic_visit(node)
+        self.class_name = ""
 
     def visit_FunctionDef(self, node):
         if self.class_name:
@@ -163,23 +164,23 @@ def get_changed_functions_in_pr(repo_owner, repo_name, pr_number, headers):
         functions_get_changed.update(res_changed_fn)
       
 
-        '''
-        Check if the PR is valid, valid means that the pr code change touch the workloads coverage
-        '''
-        # check if prev_file_name exists in col_module_coverage, if so replace it with file_name
+        # '''
+        # Check if the PR is valid, valid means that the pr code change touch the workloads coverage
+        # '''
+        # # check if prev_file_name exists in col_module_coverage, if so replace it with file_name
         
-        query_name = prev_file_name if prev_file_name else file_name
+        # query_name = prev_file_name if prev_file_name else file_name
 
-        # if .__init__ in query_name, remove it
-        if '.__init__' in query_name:
-            query_name = query_name.replace('.__init__', '')
+        # # if .__init__ in query_name, remove it
+        # if '.__init__' in query_name:
+        #     query_name = query_name.replace('.__init__', '')
 
-        existing_doc = col_module_coverage.find_one({"module_name": query_name})
+        # existing_doc = col_module_coverage.find_one({"module_name": query_name})
 
-        if existing_doc:
-            # If a document with module_name exists in the collection,
-            # the PR is valid and we should update the module_name if necessary
-            is_valid_pr = True
+        # if existing_doc:
+        #     # If a document with module_name exists in the collection,
+        #     # the PR is valid and we should update the module_name if necessary
+        #     is_valid_pr = True
 
 
         if prev_file_name:

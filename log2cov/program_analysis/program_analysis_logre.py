@@ -26,7 +26,7 @@ def mongodb_insert_many(db_logRE, docs):
         return "encounter duplication"
 
 
-def traverse_AST(entry, log_seq):
+def traverse_AST(entry, log_seq=None):
 
     client = db.Connect.get_connection()
     db_logRE = client.get_database(config.DB_NAME).get_collection("logRE")
@@ -77,21 +77,22 @@ def program_analysis_logRE(project_name, entry = None):
         db_logRE = db.Connect.get_connection().get_database(config.DB_NAME).get_collection("logRE")
         db_logRE.create_index([("logRE", pymongo.ASCENDING)])
         db_logRE.create_index([("entry", pymongo.ASCENDING)])
+        log_seq = None
     else:
+        # Below is for incremental update coverage db
         entries = entry
-
-    # get log sequence
-    log_seq_path = os.path.join("log2cov-out", "log_sequence", project_name, "log_seq.txt")
-    # log_seq_path = config.LOG_SEQ_PATH
-    with open(log_seq_path, 'r') as f:
-        log_seq = f.read()
+        # get log sequence
+        log_seq_path = os.path.join("log2cov-out", "log_sequence", project_name, "log_seq.txt")
+        # log_seq_path = config.LOG_SEQ_PATH
+        with open(log_seq_path, 'r') as f:
+            log_seq = f.read()
 
     
 
     # Traverse ASTs and update coverage db, max time 120 seconds for each traversal 
     results = []
     with ProcessPool(max_workers=8) as pool:
-         future = pool.map(traverse_AST, entries, repeat(log_seq), timeout=120)
+         future = pool.map(traverse_AST, entries, repeat(log_seq), timeout=240)
          iterator = future.result()
 
          # iterate over all results, if a computation timed out

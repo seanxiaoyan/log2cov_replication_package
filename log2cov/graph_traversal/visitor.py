@@ -755,3 +755,4 @@ class newVisitor(ast.NodeVisitor):
             new_logs.append(new_seq)
 
         return new_logs
+    
